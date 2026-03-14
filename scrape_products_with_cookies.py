@@ -15,15 +15,6 @@ try:
 except ImportError:
     psycopg2 = None
 
-DEFAULT_DB_CONFIG = {
-    'host': 'aws-1-ap-south-1.pooler.supabase.com',
-    'dbname': 'postgres',
-    'user': 'postgres.odpysbkgdzwcnwkrwrsw',
-    'password': 'IqxEqdiLbFJmEISw',
-    'port': '6543',
-    'sslmode': 'require'
-}
-
 class ProductScraper:
     def __init__(self, csv_file, cookies_file, output_file, db_config=None):
         self.csv_file = csv_file
@@ -119,25 +110,26 @@ class ProductScraper:
         return 'login' in current_url.lower() or self.driver.current_url == 'https://pronto.eastdist.com/login'
 
     def _load_db_config(self):
-        host = os.getenv('POSTGRES_HOST')
-        dbname = os.getenv('POSTGRES_DB')
-        user = os.getenv('POSTGRES_USER')
-        password = os.getenv('POSTGRES_PASSWORD')
-        port = os.getenv('POSTGRES_PORT', '5432')
-        sslmode = os.getenv('POSTGRES_SSLMODE', 'prefer')
+        host = os.getenv('SUPABASE_HOST') or os.getenv('POSTGRES_HOST')
+        dbname = os.getenv('SUPABASE_DBNAME') or os.getenv('POSTGRES_DB', 'postgres')
+        user = os.getenv('SUPABASE_USER') or os.getenv('POSTGRES_USER')
+        password = os.getenv('SUPABASE_PASSWORD') or os.getenv('POSTGRES_PASSWORD')
+        port = os.getenv('SUPABASE_PORT') or os.getenv('POSTGRES_PORT', '5432')
+        sslmode = os.getenv('POSTGRES_SSLMODE', 'require')
 
-        if all([host, dbname, user, password]):
-            return {
-                'host': host,
-                'dbname': dbname,
-                'user': user,
-                'password': password,
-                'port': port,
-                'sslmode': sslmode
-            }
-        if DEFAULT_DB_CONFIG:
-            return DEFAULT_DB_CONFIG.copy()
-        return None
+        if not all([host, user, password]):
+            raise ValueError(
+                'Database env vars required: set SUPABASE_HOST, SUPABASE_USER, SUPABASE_PASSWORD '
+                '(or POSTGRES_HOST, POSTGRES_USER, POSTGRES_PASSWORD)'
+            )
+        return {
+            'host': host,
+            'dbname': dbname,
+            'user': user,
+            'password': password,
+            'port': port,
+            'sslmode': sslmode
+        }
 
     def connect_database(self):
         if self.db_connection or self.db_config is None:
@@ -252,7 +244,7 @@ class ProductScraper:
                     print("Warning: Cookie refresh failed, continuing with existing cookies...")
             
             self.driver.get(url)
-            time.sleep(3)
+            time.sleep(1.5)
             
             if self.is_login_page():
                 print("⚠ Redirected to login page - cookies may be expired! Refreshing...")
@@ -261,7 +253,7 @@ class ProductScraper:
                     self.setup_driver()
                     self.load_cookies()
                     self.driver.get(url)
-                    time.sleep(3)
+                    time.sleep(1.5)
                 else:
                     return None
                     
@@ -404,7 +396,7 @@ class ProductScraper:
                     if index % 10 == 0:
                         print(f"\n📊 Progress: {index}/{len(product_urls)} products scraped")
                     
-                    time.sleep(1)
+                    time.sleep(0.3)
         finally:
             if self.driver:
                 self.driver.quit()

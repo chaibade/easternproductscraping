@@ -8,14 +8,11 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
 def login_and_save_cookies():
-    username = 'sales@petfoodandwire.com.au'
-    password = 'Petfood#123'
-    
-    print("username,password",username,password)
-    
+    username = os.environ.get('EASTERN_USERNAME', '')
+    password = os.environ.get('EASTERN_PASSWORD', '')
     if not username or not password:
-        print("Error: EASTERN_USERNAME and EASTERN_PASSWORD environment variables must be set")
-        return
+        raise ValueError('EASTERN_USERNAME and EASTERN_PASSWORD env vars required')
+    print("username,password", username, password)
     
     print("Setting up Chrome driver...")
     chrome_options = Options()
